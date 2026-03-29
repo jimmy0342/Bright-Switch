@@ -1,0 +1,8 @@
+{
+  "name": "Circuit Breaker Pro",
+  "description": "Professional AI-powered B2B & B2C e-commerce platform for circuit breakers and electrical components.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

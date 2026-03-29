@@ -1,0 +1,132 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isStaff() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             (getUserData().role == 'admin' || getUserData().role == 'warehouse');
+    }
+
+    // Products
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isStaff() || isSignedIn(); // Allow signed-in users to update reserved count via transactions
+    }
+    
+    match /products {
+      allow read: if true;
+    }
+
+    // Blogs
+    match /blogs/{blogId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Blog Comments
+    match /blogComments/{commentId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isStaff();
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      
+      match /activityLog/{logId} {
+        allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
+        allow create: if isStaff() || (isSignedIn() && request.auth.uid == userId);
+      }
+    }
+
+    // Orders
+    match /orders/{orderId} {
+      allow read: if (resource.data.userId == 'guest') || (isSignedIn() && (resource.data.userId == request.auth.uid || isStaff()));
+      allow create: if true; // Allow guest orders
+      allow update: if isStaff() || (resource.data.userId == 'guest') || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // Quotes
+    match /quotes/{quoteId} {
+      allow read: if isSignedIn() && (resource.data.buyerId == request.auth.uid || isStaff());
+      allow create: if isSignedIn();
+      allow update: if isStaff();
+    }
+
+    // Stock Reservations
+    match /stockReservations/{resId} {
+      allow create: if true; // Allow guest/user reservations
+      allow read, delete: if true; // Allow cleanup
+    }
+
+    // Contact Submissions
+    match /contactSubmissions/{submissionId} {
+      allow create: if true;
+      allow read, update, delete: if isStaff();
+    }
+
+    // System Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Electrician Applications
+    match /electricianApplications/{appId} {
+      allow create: if true;
+      allow read: if isStaff() || (isSignedIn() && request.auth.uid == resource.data.userId);
+      allow update, delete: if isStaff();
+    }
+
+    // Electrician Profiles
+    match /electricians/{electricianId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Hiring Flow: Service Requests
+    match /serviceRequests/{requestId} {
+      allow read: if isSignedIn() && (resource.data.customerId == request.auth.uid || getUserData().role == 'electrician' || isStaff());
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (resource.data.customerId == request.auth.uid || getUserData().role == 'electrician' || isStaff());
+    }
+
+    // Hiring Flow: Service Offers
+    match /serviceOffers/{offerId} {
+      allow read: if isSignedIn() && (getUserData().role == 'electrician' || isStaff() || (exists(/databases/$(database)/documents/serviceRequests/$(resource.data.requestId)) && get(/databases/$(database)/documents/serviceRequests/$(resource.data.requestId)).data.customerId == request.auth.uid));
+      allow create: if isSignedIn() && getUserData().role == 'electrician';
+      allow update: if isSignedIn() && (resource.data.electricianId == request.auth.uid || isStaff() || (exists(/databases/$(database)/documents/serviceRequests/$(resource.data.requestId)) && get(/databases/$(database)/documents/serviceRequests/$(resource.data.requestId)).data.customerId == request.auth.uid));
+    }
+
+    // Hiring Flow: Service Jobs
+    match /serviceJobs/{jobId} {
+      allow read: if isSignedIn() && (resource.data.customerId == request.auth.uid || resource.data.electricianId == request.auth.uid || isStaff());
+      allow write: if isSignedIn() && (resource.data.customerId == request.auth.uid || resource.data.electricianId == request.auth.uid || isStaff());
+      
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn() && (get(/databases/$(database)/documents/serviceJobs/$(jobId)).data.customerId == request.auth.uid || get(/databases/$(database)/documents/serviceJobs/$(jobId)).data.electricianId == request.auth.uid || isStaff());
+      }
+    }
+
+    // Electrician Orders
+    match /electricianOrders/{orderId} {
+      allow read: if isSignedIn() && (resource.data.electricianId == request.auth.uid || isStaff());
+      allow create: if isSignedIn() && getUserData().role == 'electrician';
+      allow update: if isStaff();
+    }
+  }
+}
