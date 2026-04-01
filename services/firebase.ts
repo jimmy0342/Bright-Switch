@@ -4,12 +4,12 @@ import { getStorage } from "firebase/storage";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD72CJRgTAzDUpwgjMdgIizf4RObr4fBJA",
+  apiKey: "",
   authDomain: "breaker-circuit-pro.firebaseapp.com",
   projectId: "breaker-circuit-pro",
   storageBucket: "breaker-circuit-pro.firebasestorage.app",
-  messagingSenderId: "749671816455",
-  appId: "1:749671816455:web:a28dc94c231db5a37df9a2"
+  messagingSenderId: "",
+  appId: ""
 };
 
 // Initialize Firebase App only once
