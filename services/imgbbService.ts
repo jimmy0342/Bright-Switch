@@ -1,7 +1,7 @@
 
 import axios from "axios";
 
-const IMGBB_API_KEY = "8e29ba80ac3c2b39a41002b2cd139f47";
+const IMGBB_API_KEY = "";
 
 export interface ImgbbResponse {
   imageUrl: string;
